@@ -34,7 +34,7 @@ I have a insta360 one X, and I record with it very often, I got full 128GB insv 
     |- apps
     |- Dockerfile
     |- MediaSDK
-    * You followed the guide above and have the metadata folder somewhere else, ex: /Users/wmou/Documents/insta360-auto-converter-data
+    * You followed the guide above and have the metadata folder somewhere else, ex: /Users/wmou/Documents/insta360-auto-converter-data, please keep in mind that files in this folder are confidential to you, `DO NOT SHARE WITH OTHERS!`
     |- auto-conversion.json 
     |- configs.txt 
     |- gphotos_auth.json 
