@@ -42,9 +42,10 @@ under the folder which contains the Dockerfile, the last "." is required.
 $ sudo docker build -t insta360-auto-converter .
 ```
 
-2. run the docker image as container
+3. run the docker image as container
 please note that you folder you mount with `-v` should be your own metadata folder.
 ```bash
 $ sudo docker run -d -v /Users/wmou/Documents/insta360-auto-converter-data:/insta360-auto-converter-data insta360-auto-converter
 ```
+
 
