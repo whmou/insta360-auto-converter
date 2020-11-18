@@ -63,3 +63,8 @@ $ sudo docker run -d -v /Users/wmou/Documents/insta360-auto-converter-data:/inst
 3. for example, "inst360_autoflow" is my working folder, then sub folder will be “測試1_360raw", and contains with many insv, insp files.
 
 ![image](https://user-images.githubusercontent.com/23136724/99519497-ec551c00-29cc-11eb-9a3b-c6cdc212a805.png)
+
+
+### Limitations:
+1. There's a daily upload limit for google drive API, according to the document is 750GB/day but I think is less than that.
+2. insp -> jpg files can not apply the stablization so that it might be weird when you moving around the 360 photos on google photos.
