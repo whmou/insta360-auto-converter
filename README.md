@@ -31,13 +31,19 @@ I have a insta360 one X, and I record with it very often, I got full 128GB insv 
 1. Check if you are ready to build the docker image
     * MediaSDK folder is in this project folder
     insta360-auto-converter
-    |- apps
-    |- Dockerfile
-    |- MediaSDK
+    ```
+    insta360-auto-converter
+    ├── Dockerfile
+    ├── MediaSDK
+    └── apps
+    ```
     * You followed the guide above and have the metadata folder somewhere else, ex: /Users/wmou/Documents/insta360-auto-converter-data, please keep in mind that files in this folder are confidential to you, `DO NOT SHARE WITH OTHERS!`
-    |- auto-conversion.json 
-    |- configs.txt 
-    |- gphotos_auth.json 
+    ```
+    insta360-auto-converter-data
+    ├── auto-conversion.json 
+    ├── configs.txt 
+    └── gphotos_auth.json 
+    ```
   
 2. Build the docker image
 under the folder which contains the Dockerfile, the last "." is required.
