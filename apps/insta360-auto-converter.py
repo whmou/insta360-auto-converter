@@ -11,6 +11,7 @@ import random
 from pathlib import Path
 import smtplib
 import time
+import glob
 import subprocess
 from configparser import ConfigParser
 from email.mime.text import MIMEText
@@ -327,6 +328,12 @@ def main():
                         cmds.append(convert_name)
                         cmds.append(output_file_name)
                         subprocess.call(" ".join(cmds), shell=True)
+                except OSError as e:
+                    log('inject 360 meta failed, filename: {}, cmds: {}, error: {}'.format(convert_name, " ".join(cmds),
+                                                                                           e), True)
+                    convert_fail_file_name = '{}.auto_broken'.format(need_convert_files['left']['name'])
+                    Path(convert_fail_file_name).touch()
+                    gs.upload_file_to_folder(convert_fail_file_name, need_convert_files['parent_folder'], 'text/plain')
                 except Exception as e:
                     log('inject 360 meta failed, filename: {}, cmds: {}, error: {}'.format(convert_name, " ".join(cmds),
                                                                                            e), True)
@@ -376,6 +383,8 @@ def main():
                 silentremove('{}/{}'.format(working_folder, convert_name + '_original'))
                 silentremove('{}/{}'.format(working_folder, output_file_name))
                 silentremove('{}/{}'.format(working_folder, need_convert_files['left']['name']))
+                for filename in glob.glob("core*"):
+                    silentremove(filename)
                 if need_convert_files['right']:
                     silentremove('{}/{}'.format(working_folder, need_convert_files['right']['name']))
                 auto_processing_remote_file = None
