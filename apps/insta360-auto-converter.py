@@ -312,8 +312,8 @@ def main():
                 try:
                     if is_img:
                         cmds.append("./Image-ExifTool-12.10/exiftool")
-                        cmds.append('-XMP-GPano:FullPanoHeightPixels="4500"')
-                        cmds.append('-XMP-GPano:FullPanoWidthPixels="9000"')
+                        cmds.append('-XMP-GPano:FullPanoHeightPixels="3040"')
+                        cmds.append('-XMP-GPano:FullPanoWidthPixels="6080"')
                         cmds.append('-XMP-GPano:ProjectionType="equirectangular"')
                         cmds.append('-XMP-GPano:UsePanoramaViewer="True"')
                         cmds.append(convert_name)
