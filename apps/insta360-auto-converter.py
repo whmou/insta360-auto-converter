@@ -193,7 +193,7 @@ class GDriveService:
 
 
 def log(content, mail_out=False):
-    logger.error(content)
+    logger.info(content)
     print('{} {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), content))
     if mail_out:
         send_mail(config["GMAIL_INFO"]["error_mail_to"], 'insta360-auto-converter Job Failed', content)
