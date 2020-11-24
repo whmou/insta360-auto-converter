@@ -339,15 +339,16 @@ def main():
                                                                                            e), True)
 
                 # 5. upload to both gdrive and gphotos
+                #service account has it's own upload limit quota, temporary stop uploading till changed to oauth
                 ## 5.1 upload to gdrive
-                try:
-                    mimetype = 'video/mp4' if 'insv' in need_convert_files['left']['name'] else 'image/jpg'
-                    gs.upload_file_to_folder(output_file_name, need_convert_files['parent_folder'], mimetype)
-                except Exception as e:
-                    log('upload_file_to_folder failed, file name: {}, parent folder: {}, error: {}'.format(
-                        output_file_name, need_convert_files['parent_folder'], e), True)
-                    if 'Drive storage quota has been exceeded'.lower() in str(e).lower():
-                        quota_exceeded_sleep_1_day = True
+                #try:
+                #    mimetype = 'video/mp4' if 'insv' in need_convert_files['left']['name'] else 'image/jpg'
+                #    gs.upload_file_to_folder(output_file_name, need_convert_files['parent_folder'], mimetype)
+                #except Exception as e:
+                #    log('upload_file_to_folder failed, file name: {}, parent folder: {}, error: {}'.format(
+                #        output_file_name, need_convert_files['parent_folder'], e), True)
+                #    if 'Drive storage quota has been exceeded'.lower() in str(e).lower():
+                #        quota_exceeded_sleep_1_day = True
 
                 ## 5.2 gphotos
                 try:
@@ -392,9 +393,9 @@ def main():
             except:
                 pass
         log('sleep 3 secs for getting next job...')
-        sleep_sec = 86400 if quota_exceeded_sleep_1_day else 3
-        if quota_exceeded_sleep_1_day:
-            quota_exceeded_sleep_1_day = False
+        sleep_sec = 3
+        #if quota_exceeded_sleep_1_day:
+        #    quota_exceeded_sleep_1_day = False
         time.sleep(sleep_sec)
 
 
