@@ -65,6 +65,15 @@ $ sudo docker run -d -v /Users/wmou/Documents/insta360-auto-converter-data:/inst
 ![image](https://user-images.githubusercontent.com/23136724/99519497-ec551c00-29cc-11eb-9a3b-c6cdc212a805.png)
 
 
+### Multi-process
+- You can run multiple docker containers on different instance for the same google account, there's a task management based on flag-files on google drive, so N docker containers are less likely getting the same insta file to work. (There's still a chance but only wasting some computing power for the cheap task management implementation.)
+
+### Bug fix release notes:
+- Nov. 25, 2020
+  - fix on stall of video conversion, some error handling added
+  - using resumable upload to google photos, >2GB files now supported
+
+
 ### Limitations:
-1. There's a daily upload limit for google drive API, according to the document is 750GB/day but I think is less than that.
-2. insp -> jpg files can not apply the stablization so that it might be weird when you moving around the 360 photos on google photos.
+1. HDR photos can not be merged in the MediaSDK until they support it, so some of photos will not be stabilized.
+

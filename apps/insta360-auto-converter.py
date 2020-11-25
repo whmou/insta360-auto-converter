@@ -23,6 +23,7 @@ from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 sys.path.append('.')
 import google_photos_uploader as gphotos
 from logging.handlers import RotatingFileHandler
+from subprocess import Popen, PIPE
 
 log_dir = '/insta360-auto-converter-data/logs'
 if not os.path.exists(log_dir):
@@ -270,42 +271,78 @@ def main():
             # 4. call 360 convert
             log('Find any files need to be converted?: {}'.format('Yes' if need_convert_files else 'No'))
             if need_convert_files != None:
-                try:
-                    auto_processing_remote_file = need_convert_files['auto_processing_file']
-                    convert_name = need_convert_files['left']['name'].replace('.insv', '_convert.mp4').replace('.insp',
-                                                                                                               '_convert.jpg')
-                    output_file_name = need_convert_files['left']['name'].replace('.insv', '.mp4').replace('.insp',
-                                                                                                           '.jpg')
-                    is_img = False if convert_name.endswith('.mp4') else True
+                stabilize_flag = True
+                retry = True
+                while retry:
+                    try:
+                        convert_fail_file_name = '{}.auto_broken'.format(need_convert_files['left']['name'])
+                        auto_processing_remote_file = need_convert_files['auto_processing_file']
+                        convert_name = need_convert_files['left']['name'].replace('.insv', '_convert.mp4').replace('.insp',
+                                                                                                                   '_convert.jpg')
+                        output_file_name = need_convert_files['left']['name'].replace('.insv', '.mp4').replace('.insp',
+                                                                                                               '.jpg')
+                        is_img = False if convert_name.endswith('.mp4') else True
 
-                    log('start to use the SDK doing conversion for the file: {}'.format(need_convert_files['left']))
+                        log('start to use the SDK doing conversion for the file: {}'.format(need_convert_files['left']))
 
-                    cmds = []
-                    cmds.append("{}/stitcherSDKDemo".format(SDK_PATH))
-                    cmds.append("-inputs")
-                    cmds.append("{}/{}".format(working_folder, need_convert_files['left']['name']))
-                    if is_img != True:
-                        cmds.append("{}/{}".format(working_folder, need_convert_files['right']['name']))
-                        cmds.append("-output_size")
-                        cmds.append("5760x2880")
-                        cmds.append("-bitrate")
-                        cmds.append("200000000")
-                        cmds.append("-enable_flowstate")
-                    else:
-                        cmds.append("-output_size")
-                        cmds.append("6080x3040")
-                    cmds.append("-stitch_type")
-                    cmds.append("dynamicstitch")
-                    cmds.append("-output")
-                    cmds.append("{}/{}".format(working_folder, convert_name))
-                    subprocess.call(" ".join(cmds), shell=True)
-                except Exception as e:
-                    log(
-                        'calling insta stitcherSDK failed: {}, left eye data info: {}, parent_dir_info: {}, error: {}'.format(
-                            e, need_convert_files['left'], need_convert_files['parent_folder'], e), True)
-                    convert_fail_file_name = '{}.auto_broken'.format(need_convert_files['left']['name'])
-                    Path(convert_fail_file_name).touch()
-                    gs.upload_file_to_folder(convert_fail_file_name, need_convert_files['parent_folder'], 'text/plain')
+                        cmds = []
+                        cmds.append("{}/stitcherSDKDemo".format(SDK_PATH))
+                        cmds.append("-inputs")
+                        cmds.append("{}/{}".format(working_folder, need_convert_files['left']['name']))
+                        if is_img != True:
+                            cmds.append("{}/{}".format(working_folder, need_convert_files['right']['name']))
+                            cmds.append("-output_size")
+                            cmds.append("5760x2880")
+                            cmds.append("-bitrate")
+                            cmds.append("200000000")
+                        else:
+                            cmds.append("-output_size")
+                            cmds.append("6080x3040")
+                        cmds.append("-stitch_type")
+                        cmds.append("dynamicstitch")
+                        if stabilize_flag:
+                            cmds.append("-enable_flowstate")
+                        cmds.append("-output")
+                        cmds.append("{}/{}".format(working_folder, convert_name))
+                        log("360 convert command: {}".format(cmds))
+                        if is_img:
+                            p = Popen(" ".join(cmds), stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=True)
+                            return_code = p.wait()
+                            log("return_code of the conversion: {}".format(return_code))
+                            if return_code == 139 and is_img and stabilize_flag:
+                                stabilize_flag = False
+                            elif return_code != 0:
+                                raise RuntimeError("return_code of the conversion is not 0")
+                            else:
+                                retry = False
+                        else:
+                            p = Popen(" ".join(cmds), stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=True)
+                            for line in p.stdout:
+                                line = str(line)
+                                log(line)
+                                time.sleep(1)
+                                if 'estimate audio frame duration' in line:
+                                    p.stdin.write(b'\n')
+                                    p.stdin.flush()
+                                    log("end line: {}".format(line))
+                                    log("rtn code: {}".format(p.returncode))
+                                    break
+                            return_code = p.wait()
+                            log("return_code of the conversion: {}".format(return_code))
+                            if return_code == 139 and is_img and stabilize_flag:
+                                stabilize_flag = False
+                            elif return_code !=0:
+                                raise RuntimeError("return_code of the conversion is not 0")
+                            else:
+                                retry = False
+
+                    except Exception as e:
+                        log(
+                            'calling insta stitcherSDK failed: {}, left eye data info: {}, parent_dir_info: {}, error: {}'.format(
+                                e, need_convert_files['left'], need_convert_files['parent_folder'], e), True)
+                        convert_fail_file_name = '{}.auto_broken'.format(need_convert_files['left']['name'])
+                        Path(convert_fail_file_name).touch()
+                        gs.upload_file_to_folder(convert_fail_file_name, need_convert_files['parent_folder'], 'text/plain')
 
                 # 4.1 inject 360 meta
                 cmds = []
@@ -401,3 +438,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
