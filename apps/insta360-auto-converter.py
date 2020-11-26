@@ -195,8 +195,12 @@ class GDriveService:
 
 
 def log(content, mail_out=False):
-    logger.info(content)
-    print('{} {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), content))
+    log_content = '{} {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), content)
+    if mail_out:
+        logger.error(log_content)
+    else:
+        logger.info(log_content)
+    print(log_content)
     if mail_out:
         send_mail(config["GMAIL_INFO"]["error_mail_to"], 'insta360-auto-converter Job Failed', content)
 
@@ -236,6 +240,11 @@ def main():
     auto_processing_remote_file = None
     quota_exceeded_sleep_1_day = False
 
+    ## sleep 3 secs flooded log handling
+    LOG_FLAG = True
+    NO_FOUND_IN_A_ROW = 0
+    NO_FOUND_IN_A_ROW_LIMIT = 10
+
     while True:
 
         try:
@@ -271,6 +280,9 @@ def main():
             # 4. call 360 convert
             log('Find any files need to be converted?: {}'.format('Yes' if need_convert_files else 'No'))
             if need_convert_files != None:
+                NO_FOUND_IN_A_ROW = 0
+                LOG_FLAG = True
+                
                 stabilize_flag = True
                 retry = True
                 while retry:
@@ -406,6 +418,10 @@ def main():
                 except Exception as e:
                     log('upload_file_to_folder failed, file name: {}, parent folder: {}, error: {}'.format(
                         auto_done_file_name, need_convert_files['parent_folder'], e), True)
+            else:
+                NO_FOUND_IN_A_ROW +=1
+                if NO_FOUND_IN_A_ROW > NO_FOUND_IN_A_ROW_LIMIT:
+                    LOG_FLAG = False
 
 
         except Exception as e:
@@ -429,7 +445,9 @@ def main():
                 gs = None
             except:
                 pass
-        log('sleep 3 secs for getting next job...')
+
+        if LOG_FLAG:        
+            log('sleep 3 secs for getting next job...')
         sleep_sec = 3
         #if quota_exceeded_sleep_1_day:
         #    quota_exceeded_sleep_1_day = False
