@@ -278,7 +278,8 @@ def main():
                     log('get_need_convert_file_in_folder failed: {}, folder info: {}'.format(e, folder), True)
 
             # 4. call 360 convert
-            log('Find any files need to be converted?: {}'.format('Yes' if need_convert_files else 'No'))
+            if LOG_FLAG:        
+                log('Find any files need to be converted?: {}'.format('Yes' if need_convert_files else 'No'))
             if need_convert_files != None:
                 NO_FOUND_IN_A_ROW = 0
                 LOG_FLAG = True
@@ -331,6 +332,8 @@ def main():
                             p = Popen(" ".join(cmds), stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=True)
                             for line in p.stdout:
                                 line = str(line)
+                                if 'process =' in line:
+                                    line = line[-50:]
                                 log(line)
                                 time.sleep(1)
                                 if 'estimate audio frame duration' in line:
@@ -421,6 +424,8 @@ def main():
             else:
                 NO_FOUND_IN_A_ROW +=1
                 if NO_FOUND_IN_A_ROW > NO_FOUND_IN_A_ROW_LIMIT:
+                    if LOG_FLAG:
+                        log('entering silent mode...')
                     LOG_FLAG = False
 
 
