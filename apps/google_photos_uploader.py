@@ -25,7 +25,7 @@ config = ConfigParser()
 config.read("/insta360-auto-converter-data/configs.txt")
 
 def log(content, mail_out=False):
-    log_content = '{} {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), content)
+    log_content = '[{}] {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), content)
     if mail_out:
         gphotos_logger.error(log_content)
     else:
