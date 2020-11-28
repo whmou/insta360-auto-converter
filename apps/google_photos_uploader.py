@@ -5,6 +5,10 @@ import os.path
 import time
 from logging.handlers import RotatingFileHandler
 from configparser import ConfigParser
+from datetime import datetime
+from datetime import date
+from email.mime.text import MIMEText
+import smtplib
 
 from google.auth.transport.requests import AuthorizedSession
 from google.oauth2.credentials import Credentials
@@ -33,6 +37,27 @@ def log(content, mail_out=False):
     print(log_content)
     if mail_out:
         send_mail(config["GMAIL_INFO"]["error_mail_to"], 'insta360-auto-converter Job Failed', content)
+
+
+def send_mail(to, subject, body):
+    s = config["GMAIL_INFO"]["pass"]
+    gmail_user = config["GMAIL_INFO"]["id"]
+    sent_from = gmail_user
+
+    mime = MIMEText(body, "plain", "utf-8")
+    mime["Subject"] = subject
+    mime["From"] = config["GMAIL_INFO"]["id"]
+    mime["To"] = to
+
+    try:
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        server.ehlo()
+        server.login(gmail_user, s)
+        server.sendmail(sent_from, to, mime.as_string())
+        server.close()
+        log('Email sent!')
+    except Exception as e:
+        log('Send mail error: {}'.format(e))
 
 
 def parse_args(arg_input=None):
