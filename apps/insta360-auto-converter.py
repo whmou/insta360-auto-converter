@@ -24,6 +24,9 @@ sys.path.append('.')
 import google_photos_uploader as gphotos
 from logging.handlers import RotatingFileHandler
 from subprocess import Popen, PIPE
+from math import ceil
+from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
+from moviepy.editor import VideoFileClip
 
 log_dir = '/insta360-auto-converter-data/logs'
 if not os.path.exists(log_dir):
@@ -193,6 +196,60 @@ class GDriveService:
 
         return rtn
 
+class VideoProcessor:
+    def __init__(self):
+        # self.SIZE_THREHOLD = 7 * (2 ** 30)
+        # self.SIZE_LIMIT = 10 * (2 ** 30)
+
+        self.SIZE_THREHOLD = 100 * (2 ** 20)
+        self.SIZE_LIMIT = 100 * (2 ** 20)
+        pass
+
+    def split_video(self, video, N=None):
+        rtn = []
+        if not N:
+            # 1. get video file size
+            file_size = os.path.getsize(video)
+            log('{} file_size: {}'.format(video, file_size))
+            if file_size < self.SIZE_LIMIT:
+                rtn.append(video)
+                log('{} clip file size lower than the limit, no need to split'.format(video))
+                return rtn
+
+            # 2. get N
+            n = int(file_size / self.SIZE_THREHOLD)
+            log('{} clip split to {} part'.format(video, n))
+
+            # 3. do split
+            rtn = self.split_video(video, n)
+
+            # 4. rtn split video list
+            return rtn
+
+        else:
+            # 1. get duration
+            clip = VideoFileClip(video)
+            duration = clip.duration
+            sec_per_clip = int(ceil(duration) / N)
+            log('{} clip duration: {}'.format(video, duration))
+
+            # 2. split secs to n part
+            start = 0
+            end = sec_per_clip
+
+            idx = 1
+            while start < duration:
+                clip_name = os.path.basename(video).replace('.mp4', '-{}.mp4'.format(idx))
+                rtn.append(clip_name)
+                idx += 1
+
+                ffmpeg_extract_subclip(video, start, end, targetname=clip_name)
+                start += sec_per_clip
+                end += sec_per_clip
+                if end > duration:
+                    end = duration
+
+            return rtn
 
 def log(content, mail_out=False):
     log_content = '[{}] {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S'), content)
@@ -359,7 +416,14 @@ def main():
                         Path(convert_fail_file_name).touch()
                         gs.upload_file_to_folder(convert_fail_file_name, need_convert_files['parent_folder'], 'text/plain')
 
-                # 4.1 inject 360 meta
+                # 4.1 split video if needed
+                split_videos = []
+                if not is_img:
+                    vp = VideoProcessor()
+                    split_videos = vp.split_video(convert_name)
+                    log('split_videos: {}'.format(split_videos))
+
+                # 4.2 inject 360 meta
                 cmds = []
                 try:
                     if is_img:
@@ -373,13 +437,18 @@ def main():
                         os.rename(convert_name, output_file_name)
 
                     else:
-                        cmds.append("python3")
-                        cmds.append("spatial-media/spatialmedia")
-                        cmds.append("-i")
-                        cmds.append("--stereo=none")
-                        cmds.append(convert_name)
-                        cmds.append(output_file_name)
-                        subprocess.call(" ".join(cmds), shell=True)
+                        for tmp_video in split_videos:
+                            cmds = []
+                            convert_name = tmp_video
+                            output_file_name = tmp_video.replace('_convert', '')
+                            log('injecting 360 meta to video: {}, output_file_name: {}'.format(tmp_video, output_file_name))
+                            cmds.append("python3")
+                            cmds.append("spatial-media/spatialmedia")
+                            cmds.append("-i")
+                            cmds.append("--stereo=none")
+                            cmds.append(convert_name)
+                            cmds.append(output_file_name)
+                            subprocess.call(" ".join(cmds), shell=True)
                 except OSError as e:
                     log('inject 360 meta failed, filename: {}, cmds: {}, error: {}'.format(convert_name, " ".join(cmds),
                                                                                            e), True)
@@ -404,8 +473,14 @@ def main():
 
                 ## 5.2 gphotos
                 try:
-                    gphotos.upload_to_album('{}/{}'.format(working_folder, output_file_name),
-                                            need_convert_files['parent_folder']['name'])
+                    if is_img:
+                        gphotos.upload_to_album('{}/{}'.format(working_folder, output_file_name),
+                                                need_convert_files['parent_folder']['name'])
+                    else:
+                        for tmp_video in split_videos:
+                            output_file_name = tmp_video.replace('_convert', '')
+                            gphotos.upload_to_album('{}/{}'.format(working_folder, output_file_name),
+                                                need_convert_files['parent_folder']['name'])
                 except Exception as e:
                     log('google photos upload_to_album failed: {}, file_name: {}, parent folder info: {}'.format(e,
                                                                                                                  output_file_name,
@@ -443,6 +518,8 @@ def main():
                 silentremove('{}/{}'.format(working_folder, output_file_name))
                 silentremove('{}/{}'.format(working_folder, need_convert_files['left']['name']))
                 for filename in glob.glob("core*"):
+                    silentremove(filename)
+                for filename in glob.glob("*mp4"):
                     silentremove(filename)
                 if need_convert_files['right']:
                     silentremove('{}/{}'.format(working_folder, need_convert_files['right']['name']))

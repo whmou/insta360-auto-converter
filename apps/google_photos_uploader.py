@@ -227,9 +227,9 @@ def upload_photos(session, photo_file_list, album_name):
                                 "X-Goog-Upload-Command": "upload",
                                 "X-Goog-Upload-Offset": str(offset),
                             }
-                            log('google photos uploading chunk {}/{}, part_size: {}'.format(i+1, number_of_req_s, part_size))
+                            # log('google photos uploading chunk {}/{}, part_size: {}'.format(i+1, number_of_req_s, part_size))
                             res = session.post(real_upload_url, headers=headers, data=current_chunk)
-                            log('google photos uploaded chunk {}/{}, response: {}'.format(i+1, number_of_req_s, res))
+                            # log('google photos uploaded chunk {}/{}, response: {}'.format(i+1, number_of_req_s, res))
 
                         log('google photos uploading last chunk for {}'.format(photo_file_name))
                         current_chunk = f_d.read(upload_granularity)

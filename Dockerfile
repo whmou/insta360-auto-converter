@@ -4,7 +4,10 @@ RUN echo -n "deb http://security.ubuntu.com/ubuntu bionic-security main" >> /etc
 RUN apt-get update && apt-get install -y build-essential && apt-cache policy libssl1.0-dev && apt-get install -y libssl1.0-dev vim
 RUN apt-get install -y python3
 RUN apt-get install -y python3-pip
-RUN pip3 install  google-api-python-client google_auth_oauthlib requests_toolbelt
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get install -y --no-install-recommends ffmpeg
+ENV DEBIAN_FRONTEND=""
+RUN pip3 install  google-api-python-client google_auth_oauthlib requests_toolbelt moviepy
 RUN sed 's/_DEFAULT_TIMEOUT = 120  # in seconds/_DEFAULT_TIMEOUT = 86400/g' /usr/local/lib/python3.8/dist-packages/google/auth/transport/requests.py > tmp.txt && mv tmp.txt /usr/local/lib/python3.8/dist-packages/google/auth/transport/requests.py
 COPY . /insta360-auto-converter/
 WORKDIR /insta360-auto-converter/MediaSDK
