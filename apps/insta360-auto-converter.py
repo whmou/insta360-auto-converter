@@ -198,11 +198,11 @@ class GDriveService:
 
 class VideoProcessor:
     def __init__(self):
-        # self.SIZE_THREHOLD = 7 * (2 ** 30)
-        # self.SIZE_LIMIT = 10 * (2 ** 30)
+        self.SIZE_THREHOLD = 5 * (2 ** 30)
+        self.SIZE_LIMIT = 7 * (2 ** 30)
 
-        self.SIZE_THREHOLD = 100 * (2 ** 20)
-        self.SIZE_LIMIT = 100 * (2 ** 20)
+        # self.SIZE_THREHOLD = 100 * (2 ** 20)
+        # self.SIZE_LIMIT = 100 * (2 ** 20)
         pass
 
     def split_video(self, video, N=None):
@@ -217,7 +217,7 @@ class VideoProcessor:
                 return rtn
 
             # 2. get N
-            n = int(file_size / self.SIZE_THREHOLD)
+            n = ceil(file_size / self.SIZE_THREHOLD)
             log('{} clip split to {} part'.format(video, n))
 
             # 3. do split
@@ -417,6 +417,8 @@ def main():
                         gs.upload_file_to_folder(convert_fail_file_name, need_convert_files['parent_folder'], 'text/plain')
 
                 # 4.1 split video if needed
+                for filename in glob.glob("*insv"):
+                    silentremove(filename)
                 split_videos = []
                 if not is_img:
                     vp = VideoProcessor()
@@ -441,7 +443,7 @@ def main():
                             cmds = []
                             convert_name = tmp_video
                             output_file_name = tmp_video.replace('_convert', '')
-                            log('injecting 360 meta to video: {}, output_file_name: {}'.format(tmp_video, output_file_name))
+                            log('injecting 360 meta to video: {}, output_file_name: {}'.format(convert_name, output_file_name))
                             cmds.append("python3")
                             cmds.append("spatial-media/spatialmedia")
                             cmds.append("-i")
@@ -449,6 +451,7 @@ def main():
                             cmds.append(convert_name)
                             cmds.append(output_file_name)
                             subprocess.call(" ".join(cmds), shell=True)
+                            silentremove(convert_name)
                 except OSError as e:
                     log('inject 360 meta failed, filename: {}, cmds: {}, error: {}'.format(convert_name, " ".join(cmds),
                                                                                            e), True)
@@ -508,6 +511,14 @@ def main():
             log('insta360-auto-converter has some error: {} at line: {}'.format(e, sys.exc_info()[2].tb_lineno), True)
         finally:
             try:
+                for filename in glob.glob("core*"):
+                    silentremove(filename)
+                for filename in glob.glob("*mp4"):
+                    silentremove(filename)
+                silentremove('{}/{}'.format(working_folder, need_convert_files['left']['name']))
+                if need_convert_files['right']:
+                    silentremove('{}/{}'.format(working_folder, need_convert_files['right']['name']))
+                auto_processing_remote_file = None
                 if gs and auto_processing_remote_file:
                     gs.remove_file(auto_processing_remote_file['id'])
                     gs.service.close()
@@ -516,17 +527,9 @@ def main():
                 silentremove('{}/{}'.format(working_folder, convert_name))
                 silentremove('{}/{}'.format(working_folder, convert_name + '_original'))
                 silentremove('{}/{}'.format(working_folder, output_file_name))
-                silentremove('{}/{}'.format(working_folder, need_convert_files['left']['name']))
-                for filename in glob.glob("core*"):
-                    silentremove(filename)
-                for filename in glob.glob("*mp4"):
-                    silentremove(filename)
-                if need_convert_files['right']:
-                    silentremove('{}/{}'.format(working_folder, need_convert_files['right']['name']))
-                auto_processing_remote_file = None
                 gs = None
-            except:
-                pass
+            except Exception as e:
+                log('finally handling cleanup has some error : {}'.format(e))
 
         if LOG_FLAG:        
             log('sleep 3 secs for getting next job...')
