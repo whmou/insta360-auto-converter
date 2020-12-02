@@ -44,10 +44,10 @@ config.read("/insta360-auto-converter-data/configs.txt")
 
 
 class GDriveService:
-    def __init__(self, cred_path, driver_id):
+    def __init__(self, cred_path, drive_id):
         self.SCOPES = ['https://www.googleapis.com/auth/drive.metadata',
                        'https://www.googleapis.com/auth/drive']
-        self.driver_id = driver_id
+        self.drive_id = drive_id
         self.cred_path = cred_path
         self.creds = service_account.Credentials.from_service_account_file(cred_path, scopes=self.SCOPES)
         self.service = build('drive', 'v3', credentials=self.creds)
@@ -92,7 +92,7 @@ class GDriveService:
                     pageToken=page_token,
                     corpora='drive',
                     pageSize=100,  # max = 1000, Default: 100
-                    driveId=self.driver_id,
+                    driveId=self.drive_id,
                     supportsTeamDrives=True,
                     includeTeamDriveItems=True,
                     fields="nextPageToken, files(id, name, mimeType)",
@@ -295,7 +295,7 @@ def main():
     working_folder = '/insta360-auto-converter/apps'
     gs = None
     auto_processing_remote_file = None
-    quota_exceeded_sleep_1_day = False
+    auto_processing_file_name = ''
 
     ## sleep 3 secs flooded log handling
     LOG_FLAG = True
@@ -307,9 +307,9 @@ def main():
         try:
             # 1. google drive init
             cred_path = '/insta360-auto-converter-data/auto-conversion.json'
-            driver_id = config["GDRIVE_INFO"]["drive_id"]
+            drive_id = config["GDRIVE_INFO"]["drive_id"]
             try:
-                gs = GDriveService(cred_path, driver_id)
+                gs = GDriveService(cred_path, drive_id)
             except Exception as e:
                 log('GDriveService init failed, exception: {}'.format(e))
 
@@ -323,6 +323,7 @@ def main():
 
             # 3. find one need convert file pair
             need_convert_files = None
+            auto_processing_remote_file = None
             for folder in all_folders:
                 try:
                     need_convert_files = gs.get_need_convert_file_in_folder(folder)
@@ -343,6 +344,7 @@ def main():
                 
                 stabilize_flag = True
                 retry = True
+                convert_return_code = -1
                 while retry:
                     try:
                         convert_fail_file_name = '{}.auto_broken'.format(need_convert_files['left']['name'])
@@ -387,12 +389,20 @@ def main():
                                 retry = False
                         else:
                             p = Popen(" ".join(cmds), stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=True)
+                            rtn_code_overwrite = 0
                             for line in p.stdout:
                                 line = str(line)
                                 if 'process =' in line:
                                     line = line[-50:]
                                 log(line)
                                 time.sleep(1)
+                                if 'Invalid data found when processing input' in line:
+                                    p.stdin.write(b'\n')
+                                    p.stdin.flush()
+                                    rtn_code_overwrite = -1
+                                    log('Error when converting file:{}, Invalid data found when processing input'.format(need_convert_files['left']['name']), True)
+                                    break
+
                                 if 'estimate audio frame duration' in line:
                                     p.stdin.write(b'\n')
                                     p.stdin.flush()
@@ -400,11 +410,12 @@ def main():
                                     log("rtn code: {}".format(p.returncode))
                                     break
                             return_code = p.wait()
+                            convert_return_code = return_code
                             log("return_code of the conversion: {}".format(return_code))
                             if return_code == 139 and is_img and stabilize_flag:
                                 stabilize_flag = False
                             elif return_code !=0:
-                                raise RuntimeError("return_code of the conversion is not 0")
+                                raise RuntimeError("return_code of the conversion is not 0, rtn code: {}".format(return_code))
                             else:
                                 retry = False
 
@@ -426,79 +437,80 @@ def main():
                     log('split_videos: {}'.format(split_videos))
 
                 # 4.2 inject 360 meta
-                cmds = []
-                try:
-                    if is_img:
-                        cmds.append("./Image-ExifTool-12.10/exiftool")
-                        cmds.append('-XMP-GPano:FullPanoHeightPixels="3040"')
-                        cmds.append('-XMP-GPano:FullPanoWidthPixels="6080"')
-                        cmds.append('-XMP-GPano:ProjectionType="equirectangular"')
-                        cmds.append('-XMP-GPano:UsePanoramaViewer="True"')
-                        cmds.append(convert_name)
-                        subprocess.call(" ".join(cmds), shell=True)
-                        os.rename(convert_name, output_file_name)
-
-                    else:
-                        for tmp_video in split_videos:
-                            cmds = []
-                            convert_name = tmp_video
-                            output_file_name = tmp_video.replace('_convert', '')
-                            log('injecting 360 meta to video: {}, output_file_name: {}'.format(convert_name, output_file_name))
-                            cmds.append("python3")
-                            cmds.append("spatial-media/spatialmedia")
-                            cmds.append("-i")
-                            cmds.append("--stereo=none")
+                if convert_return_code ==0:
+                    cmds = []
+                    try:
+                        if is_img:
+                            cmds.append("./Image-ExifTool-12.10/exiftool")
+                            cmds.append('-XMP-GPano:FullPanoHeightPixels="3040"')
+                            cmds.append('-XMP-GPano:FullPanoWidthPixels="6080"')
+                            cmds.append('-XMP-GPano:ProjectionType="equirectangular"')
+                            cmds.append('-XMP-GPano:UsePanoramaViewer="True"')
                             cmds.append(convert_name)
-                            cmds.append(output_file_name)
                             subprocess.call(" ".join(cmds), shell=True)
-                            silentremove(convert_name)
-                except OSError as e:
-                    log('inject 360 meta failed, filename: {}, cmds: {}, error: {}'.format(convert_name, " ".join(cmds),
-                                                                                           e), True)
-                    convert_fail_file_name = '{}.auto_broken'.format(need_convert_files['left']['name'])
-                    Path(convert_fail_file_name).touch()
-                    gs.upload_file_to_folder(convert_fail_file_name, need_convert_files['parent_folder'], 'text/plain')
-                except Exception as e:
-                    log('inject 360 meta failed, filename: {}, cmds: {}, error: {}'.format(convert_name, " ".join(cmds),
-                                                                                           e), True)
+                            os.rename(convert_name, output_file_name)
 
-                # 5. upload to both gdrive and gphotos
-                #service account has it's own upload limit quota, temporary stop uploading till changed to oauth
-                ## 5.1 upload to gdrive
-                #try:
-                #    mimetype = 'video/mp4' if 'insv' in need_convert_files['left']['name'] else 'image/jpg'
-                #    gs.upload_file_to_folder(output_file_name, need_convert_files['parent_folder'], mimetype)
-                #except Exception as e:
-                #    log('upload_file_to_folder failed, file name: {}, parent folder: {}, error: {}'.format(
-                #        output_file_name, need_convert_files['parent_folder'], e), True)
-                #    if 'Drive storage quota has been exceeded'.lower() in str(e).lower():
-                #        quota_exceeded_sleep_1_day = True
+                        else:
+                            for tmp_video in split_videos:
+                                cmds = []
+                                convert_name = tmp_video
+                                output_file_name = tmp_video.replace('_convert', '')
+                                log('injecting 360 meta to video: {}, output_file_name: {}'.format(convert_name, output_file_name))
+                                cmds.append("python3")
+                                cmds.append("spatial-media/spatialmedia")
+                                cmds.append("-i")
+                                cmds.append("--stereo=none")
+                                cmds.append(convert_name)
+                                cmds.append(output_file_name)
+                                subprocess.call(" ".join(cmds), shell=True)
+                                silentremove(convert_name)
+                    except OSError as e:
+                        log('inject 360 meta failed, filename: {}, cmds: {}, error: {}'.format(convert_name, " ".join(cmds),
+                                                                                            e), True)
+                        convert_fail_file_name = '{}.auto_broken'.format(need_convert_files['left']['name'])
+                        Path(convert_fail_file_name).touch()
+                        gs.upload_file_to_folder(convert_fail_file_name, need_convert_files['parent_folder'], 'text/plain')
+                    except Exception as e:
+                        log('inject 360 meta failed, filename: {}, cmds: {}, error: {}'.format(convert_name, " ".join(cmds),
+                                                                                            e), True)
 
-                ## 5.2 gphotos
-                try:
-                    if is_img:
-                        gphotos.upload_to_album('{}/{}'.format(working_folder, output_file_name),
-                                                need_convert_files['parent_folder']['name'])
-                    else:
-                        for tmp_video in split_videos:
-                            output_file_name = tmp_video.replace('_convert', '')
+                    # 5. upload to both gdrive and gphotos
+                    #service account has it's own upload limit quota, temporary stop uploading till changed to oauth
+                    ## 5.1 upload to gdrive
+                    #try:
+                    #    mimetype = 'video/mp4' if 'insv' in need_convert_files['left']['name'] else 'image/jpg'
+                    #    gs.upload_file_to_folder(output_file_name, need_convert_files['parent_folder'], mimetype)
+                    #except Exception as e:
+                    #    log('upload_file_to_folder failed, file name: {}, parent folder: {}, error: {}'.format(
+                    #        output_file_name, need_convert_files['parent_folder'], e), True)
+                    #    if 'Drive storage quota has been exceeded'.lower() in str(e).lower():
+                    #        quota_exceeded_sleep_1_day = True
+
+                    ## 5.2 gphotos
+                    try:
+                        if is_img:
                             gphotos.upload_to_album('{}/{}'.format(working_folder, output_file_name),
-                                                need_convert_files['parent_folder']['name'])
-                except Exception as e:
-                    log('google photos upload_to_album failed: {}, file_name: {}, parent folder info: {}'.format(e,
-                                                                                                                 output_file_name,
-                                                                                                                 need_convert_files[
-                                                                                                                     'parent_folder']),
-                        True)
+                                                    need_convert_files['parent_folder']['name'])
+                        else:
+                            for tmp_video in split_videos:
+                                output_file_name = tmp_video.replace('_convert', '')
+                                gphotos.upload_to_album('{}/{}'.format(working_folder, output_file_name),
+                                                    need_convert_files['parent_folder']['name'])
+                    except Exception as e:
+                        log('google photos upload_to_album failed: {}, file_name: {}, parent folder info: {}'.format(e,
+                                                                                                                    output_file_name,
+                                                                                                                    need_convert_files[
+                                                                                                                        'parent_folder']),
+                            True)
 
-                try:
-                    auto_processing_file_name = need_convert_files['left']['name'] + ".auto_processing"
-                    auto_done_file_name = need_convert_files['left']['name'] + ".auto_done"
-                    Path(auto_done_file_name).touch()
-                    gs.upload_file_to_folder(auto_done_file_name, need_convert_files['parent_folder'], 'text/plain')
-                except Exception as e:
-                    log('upload_file_to_folder failed, file name: {}, parent folder: {}, error: {}'.format(
-                        auto_done_file_name, need_convert_files['parent_folder'], e), True)
+                    # adding/uploading auto_done flag file
+                    try:
+                        auto_done_file_name = need_convert_files['left']['name'] + ".auto_done"
+                        Path(auto_done_file_name).touch()
+                        gs.upload_file_to_folder(auto_done_file_name, need_convert_files['parent_folder'], 'text/plain')
+                    except Exception as e:
+                        log('upload_file_to_folder failed, file name: {}, parent folder: {}, error: {}'.format(
+                            auto_done_file_name, need_convert_files['parent_folder'], e), True)
             else:
                 NO_FOUND_IN_A_ROW +=1
                 if NO_FOUND_IN_A_ROW > NO_FOUND_IN_A_ROW_LIMIT:
@@ -518,7 +530,6 @@ def main():
                 silentremove('{}/{}'.format(working_folder, need_convert_files['left']['name']))
                 if need_convert_files['right']:
                     silentremove('{}/{}'.format(working_folder, need_convert_files['right']['name']))
-                auto_processing_remote_file = None
                 if gs and auto_processing_remote_file:
                     gs.remove_file(auto_processing_remote_file['id'])
                     gs.service.close()
