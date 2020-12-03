@@ -140,6 +140,8 @@ class GDriveService:
         # 1. classify all files
         for file in all_files:
             name = file['name']
+            if name.startswith('._') or ').ins' in name:
+                continue
             if name.endswith('.insv') and '_00_' in name:
                 left_eye_videos.append(file)
             elif name.endswith('.insv') and '_10_' in name:
@@ -296,6 +298,7 @@ def main():
     gs = None
     auto_processing_remote_file = None
     auto_processing_file_name = ''
+    auto_done_file_name = ''
 
     ## sleep 3 secs flooded log handling
     LOG_FLAG = True
@@ -390,13 +393,28 @@ def main():
                         else:
                             p = Popen(" ".join(cmds), stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=True)
                             rtn_code_overwrite = 0
+                            tmp_output_file_size = 0
+                            FILE_SIZE_NO_CHANGE_LIMIT = 180
+                            same_size_cnt = 0
                             for line in p.stdout:
                                 line = str(line)
                                 if 'process =' in line:
                                     line = line[-50:]
                                 log(line)
+                                if os.path.exists(convert_name):
+                                    current_file_size = os.path.getsize(convert_name)
+                                    if tmp_output_file_size == current_file_size:
+                                        same_size_cnt +=1
+                                    else:
+                                        same_size_cnt = max(0, same_size_cnt-1)
+                                    tmp_output_file_size = current_file_size
+                                if same_size_cnt >FILE_SIZE_NO_CHANGE_LIMIT:
+                                    rtn_code_overwrite = -2
+                                    log('Error when converting file:{}, output file size does not changed for a while, timeout reached'.format(need_convert_files['left']['name']), True)
+                                    break
+
                                 time.sleep(1)
-                                if 'Invalid data found when processing input' in line:
+                                if 'Invalid data found when processing input' in line or 'media Pipeline prepare failed' in line:
                                     p.stdin.write(b'\n')
                                     p.stdin.flush()
                                     rtn_code_overwrite = -1
@@ -428,6 +446,7 @@ def main():
                         gs.upload_file_to_folder(convert_fail_file_name, need_convert_files['parent_folder'], 'text/plain')
 
                 # 4.1 split video if needed
+                time.sleep(30)
                 for filename in glob.glob("*insv"):
                     silentremove(filename)
                 split_videos = []
@@ -527,17 +546,16 @@ def main():
                     silentremove(filename)
                 for filename in glob.glob("*mp4"):
                     silentremove(filename)
+                for filename in glob.glob("*auto_processing"):
+                    silentremove(filename)
+                for filename in glob.glob("*auto_broken"):
+                    silentremove(filename)
                 silentremove('{}/{}'.format(working_folder, need_convert_files['left']['name']))
                 if need_convert_files['right']:
                     silentremove('{}/{}'.format(working_folder, need_convert_files['right']['name']))
                 if gs and auto_processing_remote_file:
                     gs.remove_file(auto_processing_remote_file['id'])
                     gs.service.close()
-                silentremove(auto_processing_file_name)
-                silentremove(auto_done_file_name)
-                silentremove('{}/{}'.format(working_folder, convert_name))
-                silentremove('{}/{}'.format(working_folder, convert_name + '_original'))
-                silentremove('{}/{}'.format(working_folder, output_file_name))
                 gs = None
             except Exception as e:
                 log('finally handling cleanup has some error : {}'.format(e))
