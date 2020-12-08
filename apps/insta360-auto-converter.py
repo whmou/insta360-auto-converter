@@ -330,7 +330,7 @@ def main():
             for folder in all_folders:
                 try:
                     need_convert_files = gs.get_need_convert_file_in_folder(folder)
-                    if need_convert_files != None:
+                    if need_convert_files:
                         # download 2 files to local to convert
                         log('Download ins files {}'.format([need_convert_files['left'], need_convert_files['right']]))
                         gs.download_file([need_convert_files['left'], need_convert_files['right']])
@@ -341,7 +341,7 @@ def main():
             # 4. call 360 convert
             if LOG_FLAG:        
                 log('Find any files need to be converted?: {}'.format('Yes' if need_convert_files else 'No'))
-            if need_convert_files != None:
+            if need_convert_files:
                 NO_FOUND_IN_A_ROW = 0
                 LOG_FLAG = True
                 
@@ -560,9 +560,10 @@ def main():
                     silentremove(filename)
                 for filename in glob.glob("*auto_broken"):
                     silentremove(filename)
-                silentremove('{}/{}'.format(working_folder, need_convert_files['left']['name']))
-                if need_convert_files['right']:
-                    silentremove('{}/{}'.format(working_folder, need_convert_files['right']['name']))
+                if need_convert_files:
+                    silentremove('{}/{}'.format(working_folder, need_convert_files['left']['name']))
+                    if need_convert_files['right']:
+                        silentremove('{}/{}'.format(working_folder, need_convert_files['right']['name']))
                 if gs and auto_processing_remote_file:
                     gs.remove_file(auto_processing_remote_file['id'])
                     gs.service.close()
