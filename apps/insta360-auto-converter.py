@@ -387,6 +387,7 @@ def main():
                             if return_code == 139 and is_img and stabilize_flag:
                                 stabilize_flag = False
                             elif return_code != 0:
+                                retry = False
                                 raise RuntimeError("return_code of the conversion is not 0")
                             else:
                                 retry = False
@@ -428,7 +429,6 @@ def main():
                                     log("rtn code: {}".format(p.returncode))
                                     break
                             return_code = p.wait()
-                            convert_return_code = return_code
                             log("return_code of the conversion: {}".format(return_code))
                             if return_code == 139 and is_img and stabilize_flag:
                                 stabilize_flag = False
@@ -437,6 +437,7 @@ def main():
                             else:
                                 retry = False
 
+                        convert_return_code = return_code
                     except Exception as e:
                         log(
                             'calling insta stitcherSDK failed: {}, left eye data info: {}, parent_dir_info: {}, error: {}'.format(
@@ -446,20 +447,24 @@ def main():
                         gs.upload_file_to_folder(convert_fail_file_name, need_convert_files['parent_folder'], 'text/plain')
 
                 # 4.1 split video if needed
-                time.sleep(30)
-                for filename in glob.glob("*insv"):
-                    silentremove(filename)
                 split_videos = []
+                log('buffer for flushing output file...')
                 if not is_img:
+                    for filename in glob.glob("*insv"):
+                        silentremove(filename)
+                    time.sleep(30)
                     vp = VideoProcessor()
                     split_videos = vp.split_video(convert_name)
                     log('split_videos: {}'.format(split_videos))
+                else:
+                    time.sleep(5)
 
                 # 4.2 inject 360 meta
                 if convert_return_code ==0:
                     cmds = []
                     try:
                         if is_img:
+                            log('injecting 360 meta to image: {}, output_file_name: {}'.format(convert_name, output_file_name))
                             cmds.append("./Image-ExifTool-12.10/exiftool")
                             cmds.append('-XMP-GPano:FullPanoHeightPixels="3040"')
                             cmds.append('-XMP-GPano:FullPanoWidthPixels="6080"')
@@ -508,6 +513,7 @@ def main():
                     ## 5.2 gphotos
                     try:
                         if is_img:
+                            log('uploading image to google photos: {}')
                             gphotos.upload_to_album('{}/{}'.format(working_folder, output_file_name),
                                                     need_convert_files['parent_folder']['name'])
                         else:
@@ -546,7 +552,11 @@ def main():
                     silentremove(filename)
                 for filename in glob.glob("*mp4"):
                     silentremove(filename)
+                for filename in glob.glob("*jpg"):
+                    silentremove(filename)
                 for filename in glob.glob("*auto_processing"):
+                    silentremove(filename)
+                for filename in glob.glob("*auto_done"):
                     silentremove(filename)
                 for filename in glob.glob("*auto_broken"):
                     silentremove(filename)
