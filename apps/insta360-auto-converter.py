@@ -554,6 +554,8 @@ def main():
                     silentremove(filename)
                 for filename in glob.glob("*jpg"):
                     silentremove(filename)
+                for filename in glob.glob("*_original"):
+                    silentremove(filename)
                 for filename in glob.glob("*auto_processing"):
                     silentremove(filename)
                 for filename in glob.glob("*auto_done"):
