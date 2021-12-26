@@ -52,7 +52,7 @@ $ sudo docker build -t insta360-auto-converter .
 ```
 
 3. run the docker image as container
-please note that you folder you mount with `-v` should be your own metadata folder.
+please note that the folder you mount with `-v` should be your own metadata folder.
 ```bash
 $ sudo docker run -d -v /Users/wmou/Documents/insta360-auto-converter-data:/insta360-auto-converter-data insta360-auto-converter
 ```

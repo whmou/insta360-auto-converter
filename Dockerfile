@@ -14,4 +14,4 @@ WORKDIR /insta360-auto-converter/MediaSDK
 ENV LD_LIBRARY_PATH=LD_LIBRARY_PATH:/insta360-auto-converter/MediaSDK/lib/
 RUN g++ -Wno-error -std=c++11  example/main.cc -o stitcherSDKDemo -I/insta360-auto-converter/MediaSDK/include/ -L/insta360-auto-converter/MediaSDK/lib/ -L/insta360-auto-converter/MediaSDK/lib/ -lMediaSDK
 WORKDIR /insta360-auto-converter/apps
-CMD ["python3", "insta360-auto-converter.py"]
+CMD ["python3", "insta360_auto_converter.py"]
