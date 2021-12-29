@@ -516,11 +516,12 @@ def main():
                             log('uploading image to google photos: {}')
                             gphotos.upload_to_album('{}/{}'.format(working_folder, output_file_name),
                                                     need_convert_files['parent_folder']['name'])
-                        else:
-                            for tmp_video in split_videos:
-                                output_file_name = tmp_video.replace('_convert', '')
-                                gphotos.upload_to_album('{}/{}'.format(working_folder, output_file_name),
-                                                    need_convert_files['parent_folder']['name'])
+                        # (issues_2: only photos will upload to google photos )
+                        # else:
+                        #     for tmp_video in split_videos:
+                        #         output_file_name = tmp_video.replace('_convert', '')
+                        #         gphotos.upload_to_album('{}/{}'.format(working_folder, output_file_name),
+                        #                             need_convert_files['parent_folder']['name'])
                     except Exception as e:
                         log('google photos upload_to_album failed: {}, file_name: {}, parent folder info: {}'.format(e,
                                                                                                                     output_file_name,
