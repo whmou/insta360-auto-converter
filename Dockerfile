@@ -4,6 +4,7 @@ RUN echo -n "deb http://security.ubuntu.com/ubuntu bionic-security main" >> /etc
 RUN apt-get update && apt-get install -y build-essential && apt-cache policy libssl1.0-dev && apt-get install -y libssl1.0-dev vim
 RUN apt-get install -y python3
 RUN apt-get install -y python3-pip
+RUN apt-get install -y libimage-exiftool-perl
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get install -y --no-install-recommends ffmpeg
 ENV DEBIAN_FRONTEND=""
