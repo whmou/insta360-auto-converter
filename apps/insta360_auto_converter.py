@@ -249,7 +249,7 @@ def main():
                             log('uploading image to google photos: {}')
                             gphotos.upload_to_album('{}/{}'.format(working_folder, output_file_name),
                                                     need_convert_files['parent_folder']['name'])
-                        # (issues_2: only photos will upload to google photos )
+                        # (#2: only photos will upload to google photos )
                         # else:
                         #     for tmp_video in split_videos:
                         #         output_file_name = tmp_video.replace('_convert', '')
