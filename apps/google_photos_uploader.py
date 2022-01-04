@@ -109,6 +109,8 @@ def getAlbums(session, appCreatedOnly=False):
                 params["pageToken"] = albums["nextPageToken"]
             else:
                 break
+        if len(albums) == 0:
+            break
         time.sleep(0.25)
     return rtn
 
