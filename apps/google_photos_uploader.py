@@ -57,9 +57,9 @@ def get_authorized_session(auth_token_file):
         try:
             cred = Credentials.from_authorized_user_file(auth_token_file, scopes)
         except OSError as err:
-            logger.debug("Error opening auth token file - {0}".format(err))
+            log("Error opening auth token file - {0}".format(err))
         except ValueError:
-            logger.debug("Error loading auth tokens - Incorrect format")
+            log("Error loading auth tokens - Incorrect format")
 
 
     if not cred:
@@ -72,7 +72,7 @@ def get_authorized_session(auth_token_file):
         try:
             save_cred(cred, auth_token_file)
         except OSError as err:
-            logger.debug("Could not save auth tokens - {0}".format(err))
+            log("Could not save auth tokens - {0}".format(err))
 
     return session
 
