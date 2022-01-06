@@ -37,6 +37,7 @@ def log(content, mail_out=False):
 def silentremove(filename):
     try:
         os.remove(filename)
+        os.rmdir(filename)
     except:
         pass
 
