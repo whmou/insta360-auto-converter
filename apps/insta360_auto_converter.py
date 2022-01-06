@@ -262,12 +262,12 @@ def main():
                                 output_file_name = tmp_video.replace('_convert', '')
                                 youtube_playlists = youtube_handler.get_playlists()
                                 target_playlist_name = need_convert_files['parent_folder']['name']
-                                youtube_handler.get_or_create_playlist(target_playlist_name, youtube_playlists)
+                                target_playlist = youtube_handler.get_or_create_playlist(target_playlist_name, youtube_playlists)
 
                                 vid = youtube_handler.initialize_upload(output_file_name, '{}/{}'.format(working_folder, output_file_name))
                                 
                                 filtered_target_playlist = list(filter(lambda p: 'snippet' in p and 'title' in p['snippet'] and p['snippet']['title'] == target_playlist_name, youtube_playlists))
-                                youtube_handler.set_video_to_playlist(vid, filtered_target_playlist[0]['id'])
+                                youtube_handler.set_video_to_playlist(vid, target_playlist)
                                 # gphotos.upload_to_album('{}/{}'.format(working_folder, output_file_name),
                                 #                     need_convert_files['parent_folder']['name'])
                     except Exception as e:
