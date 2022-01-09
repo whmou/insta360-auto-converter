@@ -217,11 +217,11 @@ class YoutubeHandler:
         retry = 0
         while response is None:
             try:
-                print ("Uploading file...")
+                log ("Uploading file...")
                 status, response = insert_request.next_chunk()
                 if response is not None:
                     if 'id' in response:
-                        print ("Video id '%s' was successfully uploaded." % response['id'])
+                        log ("Video id '%s' was successfully uploaded." % response['id'])
                         return response['id']
             except Exception as e:
                 exc_type, exc_obj, exc_tb = sys.exc_info()
@@ -229,7 +229,7 @@ class YoutubeHandler:
                 log(exc_type, fname, exc_tb.tb_lineno)
 
             if error is not None:
-                print (error)
+                log (error)
                 retry += 1
             if retry > self._MAX_RETRIES:
                 exit("No longer attempting to retry.")
