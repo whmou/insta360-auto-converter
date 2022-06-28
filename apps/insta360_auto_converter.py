@@ -271,11 +271,8 @@ def main():
                                 # gphotos.upload_to_album('{}/{}'.format(working_folder, output_file_name),
                                 #                     need_convert_files['parent_folder']['name'])
                     except Exception as e:
-                        log('media upload to album/playlist failed: {}, file_name: {}, parent folder info: {}'.format(e,
-                                                                                                                    output_file_name,
-                                                                                                                    need_convert_files[
-                                                                                                                        'parent_folder']),
-                            True)
+                        msg = 'media upload to album/playlist failed: {}, file_name: {}, parent folder info: {}'.format(e, output_file_name, need_convert_files['parent_folder'])
+                        log(msg, True)
 
                     # adding/uploading auto_done flag file
                     try:

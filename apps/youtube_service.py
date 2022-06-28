@@ -239,13 +239,13 @@ class YoutubeHandler:
             log ("Sleeping %f seconds and then retrying..." % sleep_seconds)
             time.sleep(sleep_seconds)
 
-    def set_video_to_playlist(self, vid, playlistId):
+    def set_video_to_playlist(self, vid, playlist):
         # youtube_session = self.get_youtube_upload_authenticated_service('{}/youtube_auth.json'.format(DATA_DIR))
         request = self._youtube_service.playlistItems().insert(
             part="snippet",
             body={
             "snippet": {
-                "playlistId": playlistId,
+                "playlistId": playlist['id'],
                 "resourceId": {
                 "videoId": vid,
                 "kind": "youtube#video"
