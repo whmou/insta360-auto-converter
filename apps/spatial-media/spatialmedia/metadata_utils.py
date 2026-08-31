@@ -279,7 +279,9 @@ def parse_spherical_xml(contents, console):
             return
 
     sphericalDictionary = dict()
-    for child in parsed_xml.getchildren():
+    # Element.getchildren() was removed in Python 3.9. Iterating the Element
+    # has returned the same direct children since Python 2.7.
+    for child in parsed_xml:
         if child.tag in SPHERICAL_TAGS.keys():
             console("\t\t" + SPHERICAL_TAGS[child.tag]
                     + " = " + child.text)

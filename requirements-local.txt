@@ -1,0 +1,6 @@
+# Direct runtime dependencies validated on Windows and Python 3.11.
+# Transitive dependencies are intentionally resolved by pip and are not hash-locked.
+google-api-python-client==2.192.0
+google-auth==2.49.1
+google-auth-oauthlib==1.3.0
+tzdata==2025.3

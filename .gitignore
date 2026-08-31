@@ -1,6 +1,39 @@
 MediaSDK
 insta360-auto-converter-data
 
+# Machine-specific configuration. Track config.example.psd1 only.
+.local/
+config.local.*
+*.local.ps1
+.env*
+!.env.example
+credentials/
+secrets/
+credentials*.json
+service-account*.json
+*.credentials.json
+*.pem
+*.p12
+*.pfx
+*.key
+configs.txt
+
+# Local OAuth credentials and generated media/state
+client_secret*.json
+*token*.json
+youtube_auth.json
+test-input/
+test-output/
+*.insv
+*.insp
+*.mp4
+*.partial.mp4
+*.stitched.mp4
+upload-ledger.json
+upload-ledger.json.lock
+*.conversion.json
+*.log
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
